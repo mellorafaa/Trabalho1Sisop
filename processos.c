@@ -5,6 +5,7 @@
 #include <sys/shm.h>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <time.h>
 
 #define TOTAL 1000000000
 #define SEM_NAME "/meusem_sisop"
@@ -57,6 +58,9 @@ int main(int argc, char* argv[]) {
 
     long por_processo = TOTAL / N;
 
+    struct timespec inicio, fim;
+    clock_gettime(CLOCK_MONOTONIC, &inicio);
+
     for (int i = 0; i < N; i++) {
         pid_t pid = fork();
 
@@ -87,7 +91,11 @@ int main(int argc, char* argv[]) {
         wait(NULL);
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &fim);
+    double tempo = (fim.tv_sec - inicio.tv_sec) + (fim.tv_nsec - inicio.tv_nsec) / 1e9;
+
     printf("Valor final: %ld\n", *contador);
+    printf("Tempo de execução: %.4f segundos\n", tempo);
 
     if (modo == 2) {
         sem_close(sem);

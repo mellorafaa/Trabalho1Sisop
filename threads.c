@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 
 #define TOTAL 1000000000
 
@@ -53,6 +54,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    struct timespec inicio, fim;
+    clock_gettime(CLOCK_MONOTONIC, &inicio);
+
     for (int i = 0; i < N; i++) {
         int ret;
         if (modo == 1)
@@ -71,7 +75,11 @@ int main(int argc, char* argv[]) {
         pthread_join(threads[i], NULL);
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &fim);
+    double tempo = (fim.tv_sec - inicio.tv_sec) + (fim.tv_nsec - inicio.tv_nsec) / 1e9;
+
     printf("Valor final: %ld\n", contador);
+    printf("Tempo de execução: %.4f segundos\n", tempo);
 
     pthread_mutex_destroy(&lock);
     return 0;
