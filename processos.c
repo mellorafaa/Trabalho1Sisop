@@ -45,7 +45,6 @@ int main(int argc, char* argv[]) {
 
     sem_t *sem = NULL;
     if (modo == 2) {
-        /* Remove semáforo de execução anterior para evitar estado inconsistente */
         sem_unlink(SEM_NAME);
         sem = sem_open(SEM_NAME, O_CREAT | O_EXCL, 0644, 1);
         if (sem == SEM_FAILED) {
