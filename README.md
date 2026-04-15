@@ -20,6 +20,7 @@ Introdução:
 
     Comandos:
         make - Compilar
+        lscpu - Assinatura do Hardware
         ./threads <N> 1 - Executar threads sem mutex (T1)
         ./threads <N> 2 - Executar threads com mutex (T2)
         ./processos <N> 1 - Executar processos sem semáforo (P1)
