@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <semaphore.h>
@@ -60,6 +61,19 @@ int main(int argc, char* argv[]) {
     struct timespec inicio, fim;
     clock_gettime(CLOCK_MONOTONIC, &inicio);
 
+    // Armazenar PIDs para aguardar finalizações
+    pid_t *pids = (pid_t*) malloc(N * sizeof(pid_t));
+    if (pids == NULL) {
+        fprintf(stderr, "Erro: falha ao alocar memória para PIDs\n");
+        if (modo == 2) {
+            sem_close(sem);
+            sem_unlink(SEM_NAME);
+        }
+        shmdt(contador);
+        shmctl(shmid, IPC_RMID, NULL);
+        return 1;
+    }
+
     for (int i = 0; i < N; i++) {
         pid_t pid = fork();
 
@@ -71,38 +85,76 @@ int main(int argc, char* argv[]) {
             }
             shmdt(contador);
             shmctl(shmid, IPC_RMID, NULL);
+            free(pids);
             return 1;
         }
 
         if (pid == 0) {
+            // Processo filho
             for (long j = 0; j < por_processo; j++) {
-                if (modo == 2) sem_wait(sem);
+                if (modo == 2) {
+                    if (sem_wait(sem) == -1) {
+                        perror("sem_wait");
+                    }
+                }
                 (*contador)++;
-                if (modo == 2) sem_post(sem);
+                if (modo == 2) {
+                    if (sem_post(sem) == -1) {
+                        perror("sem_post");
+                    }
+                }
             }
-            if (modo == 2) sem_close(sem);
-            shmdt(contador);
+            if (modo == 2) {
+                if (sem_close(sem) == -1) {
+                    perror("sem_close");
+                }
+            }
+            if (shmdt(contador) == -1) {
+                perror("shmdt (filho)");
+            }
             exit(0);
+        }
+        // Processo pai armazena PID do filho
+        pids[i] = pid;
+    }
+
+    // Aguardar conclusão de todos os filhos
+    for (int i = 0; i < N; i++) {
+        int status;
+        pid_t waited_pid = waitpid(pids[i], &status, 0);
+        if (waited_pid == -1) {
+            perror("waitpid");
+        } else if (!WIFEXITED(status)) {
+            fprintf(stderr, "Aviso: processo %d não terminou normalmente\n", i);
         }
     }
 
-    for (int i = 0; i < N; i++) {
-        wait(NULL);
+    // Registrar tempo final
+    if (clock_gettime(CLOCK_MONOTONIC, &fim) == -1) {
+        perror("clock_gettime (fim)");
     }
-
-    clock_gettime(CLOCK_MONOTONIC, &fim);
     double tempo = (fim.tv_sec - inicio.tv_sec) + (fim.tv_nsec - inicio.tv_nsec) / 1e9;
 
     printf("Valor final: %ld\n", *contador);
     printf("Tempo de execução: %.4f segundos\n", tempo);
 
+    // Cleanup recursos do pai
     if (modo == 2) {
-        sem_close(sem);
-        sem_unlink(SEM_NAME);
+        if (sem_close(sem) == -1) {
+            perror("sem_close (pai)");
+        }
+        if (sem_unlink(SEM_NAME) == -1) {
+            perror("sem_unlink");
+        }
     }
 
-    shmdt(contador);
-    shmctl(shmid, IPC_RMID, NULL);
+    if (shmdt(contador) == -1) {
+        perror("shmdt (pai)");
+    }
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+    }
 
+    free(pids);
     return 0;
 }

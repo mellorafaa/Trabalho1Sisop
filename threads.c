@@ -46,17 +46,31 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    pthread_t threads[N];
+    // Alocar array de threads dinamicamente
+    pthread_t *threads = (pthread_t*) malloc(N * sizeof(pthread_t));
+    if (threads == NULL) {
+        fprintf(stderr, "Erro: falha ao alocar memória para threads\n");
+        return 1;
+    }
+
     por_thread = TOTAL / N;
 
+    // Inicializar mutex com atributos padrão
     if (pthread_mutex_init(&lock, NULL) != 0) {
         fprintf(stderr, "Erro: falha ao inicializar mutex\n");
+        free(threads);
         return 1;
     }
 
     struct timespec inicio, fim;
-    clock_gettime(CLOCK_MONOTONIC, &inicio);
+    if (clock_gettime(CLOCK_MONOTONIC, &inicio) != 0) {
+        perror("clock_gettime (inicio)");
+        pthread_mutex_destroy(&lock);
+        free(threads);
+        return 1;
+    }
 
+    // Criar threads
     for (int i = 0; i < N; i++) {
         int ret;
         if (modo == 1)
@@ -67,20 +81,34 @@ int main(int argc, char* argv[]) {
         if (ret != 0) {
             fprintf(stderr, "Erro: falha ao criar thread %d\n", i);
             pthread_mutex_destroy(&lock);
+            free(threads);
             return 1;
         }
     }
 
+    // Aguardar conclusão de todas as threads
     for (int i = 0; i < N; i++) {
-        pthread_join(threads[i], NULL);
+        int ret = pthread_join(threads[i], NULL);
+        if (ret != 0) {
+            fprintf(stderr, "Erro: falha ao aguardar thread %d\n", i);
+        }
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &fim);
+    // Registrar tempo final
+    if (clock_gettime(CLOCK_MONOTONIC, &fim) != 0) {
+        perror("clock_gettime (fim)");
+        pthread_mutex_destroy(&lock);
+        free(threads);
+        return 1;
+    }
+
     double tempo = (fim.tv_sec - inicio.tv_sec) + (fim.tv_nsec - inicio.tv_nsec) / 1e9;
 
     printf("Valor final: %ld\n", contador);
     printf("Tempo de execução: %.4f segundos\n", tempo);
 
+    // Cleanup
     pthread_mutex_destroy(&lock);
+    free(threads);
     return 0;
 }

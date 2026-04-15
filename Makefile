@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -pthread
+CFLAGS = -Wall -Wextra -std=c99 -pthread
 
 all: threads processos
 
