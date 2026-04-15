@@ -9,15 +9,12 @@ Integrantes:
 
 Introdução:
     Este trabalho compara ooverhead de criação, o custo de comunicação e a consistência de dados entre processos (POSIX fork) e threads (POSIX pthreads) em ambiente Linux.
-
     O experimento consiste em incrementar um contador global até 1.000.000.000 (um bilhão), distribuindo o trabalho entre N unidades de execução (N = 2, 4 e 8), em quatro cenários:
-
     Cenário - descrição:
         T1 - Threads sem mutex (sem sincronização) 
         T2 - Threads com pthread_mutex
         P1 - Processos via fork + memória compartilhada (shmget) sem semáforo 
         P2 - Processos via fork + memória compartilhada com sem_open 
-
     Comandos:
         make - Compilar
         ./threads <N> 1 - Executar threads sem mutex (T1)
@@ -60,9 +57,7 @@ Desenvolvimento:
         L1i:                    512 KiB (8 instances)
         L2:                     16 MiB (8 instances)
         L3:                     6 MiB (1 instance)
-
     O processador utilizado é um Intel Core i3-N305 com 8 núcleos físicos e 1 thread por núcleo (sem Hyper-Threading). Isso significa que os experimentos com N = 8 podem saturar todos os núcleos disponíveis, o que impacta diretamente no comportamento de concorrência e na frequência de colisões observadas nos experimentos sem sincronização.
-
     Resultados
         Tabela de Tempos
             |Experimento                 | N = 2      | N = 4      | N = 8      |
@@ -70,7 +65,6 @@ Desenvolvimento:
             |T2 — threads com mutex      | 99.6028 s  | 93.5196 s  | 90.7124 s  |
             |P1 — processos sem semáforo | 2.5497 s   | 2.8438 s   | 3.1545 s   |
             |P2 — processos com semáforo | 182.4934 s | 200.6238 s | 303.9470 s |
-
     Análise de Corrupção
         Nos experimentos T1 (threads sem mutex) e P1 (processos sem semáforo), o contador não atingiu 1.000.000.000:
             |Experimento      | N = 2       | N = 4       | N = 8       |
@@ -83,41 +77,31 @@ Desenvolvimento:
                 3. A escreve contador = 1001.
                 4. B escreve contador = 1001 — o incremento de A foi sobrescrito e perdido.
             Esse fenômeno é chamado de lost update (atualização perdida).
-
     Correlação com o hardware:
         O i3-N305 possui 8 núcleos independentes sem Hyper-Threading, o que significa que com N = 8 todos os núcleos executam genuinamente em paralelo, sem compartilhamento de pipeline. Isso maximiza as janelas de colisão entre as leituras e escritas concorrentes, explicando por que P1 com N = 8 (203.808.717) teve o pior índice de corrupção, quase 80% das incrementações foram perdidas. Cada núcleo possui seu próprio cache L1/L2 privado (256 KiB e 16 MiB por instância), o que agrava a inconsistência: cada núcleo pode ter uma cópia diferente do contador em seu cache antes de propagá-la para o L3 compartilhado.
-
     Gráfico de Escalabilidade:
 
 
 Conclusão
     Overhead de Criação
         Criar um processo via fork tem custo maior que criar uma thread: o sistema operacional precisa duplicar o espaço de endereçamento do processo pai (copy-on-write), alocar uma entrada na tabela de processos e configurar canais de IPC. Threads compartilham o mesmo espaço de endereçamento do processo criador, tornando sua criação significativamente mais leve.
-
         Nos experimentos sem sincronização, P1 foi mais rápido que T1 em todos os cenários, o que pode parecer contraditório. Porém, isso se deve à menor corrupção de cache entre processos no início da execução, cada processo tem espaço próprio, e não indica menor overhead de criação.
-
     Comunicação
         Threads compartilham memória automaticamente via variáveis globais. A comunicação é implícita e de baixo custo, mas exige sincronização explícita para evitar race conditions.
-        
         Processos precisam de mecanismos explícitos de IPC como memória compartilhada (shmget/shmat). Há custo adicional de configuração e de chamadas de sistema, além da necessidade de semáforos para proteger o acesso.
-        
         Threads são claramente mais eficientes na comunicação para dados compartilhados.
-    
     Consistência de Dados
         | Cenário | Resultado com N = 8 | Consistente? |
         | T1      | 447.515.488         | Não          |
         | T2      | 1.000.000.000       | Sim          |
         | P1      | 203.808.717         | Não          |
         | P2      | 1.000.000.000       | Sim          |
-
             Sem mecanismos de sincronização (mutex ou semáforo), nenhum modelo garante consistência. Com sincronização, ambos atingem o resultado correto, porém com alto custo de tempo, especialmente P2 (semáforos POSIX nomeados têm overhead de chamada de sistema maior que mutexes de threads).
-
     Comparativo Final
         | Aspecto                | Threads (pthreads)                       | Processos (fork)                          |
         | Overhead de criação    | Baixo                                    | Alto                                      |
         | Comunicação            | Eficiente (memória compartilhada nativa) | Custosa (IPC explícita via shmget)        |
         | Consistência sem sinc. | Corrompida                               | Corrompida (mais severa com mais núcleos) |
         | Consistência com sinc. | Sim (mutex) — 95 s                       | Sim (semáforo) — 180–304 s                |
-
             Processos têm maior overhead de criação e de comunicação.
             Threads são mais eficientes para tarefas que compartilham dados, desde que a sincronização seja aplicada corretamente.
