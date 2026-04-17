@@ -8,7 +8,7 @@ Integrantes:
     - Vinicius Moço Quintian
 
 Introdução:
-    Este trabalho compara ooverhead de criação, o custo de comunicação e a consistência de dados entre processos (POSIX fork) e threads (POSIX pthreads) em ambiente Linux.
+    Este trabalho compara o overhead de criação, o custo de comunicação e a consistência de dados entre processos (POSIX fork) e threads (POSIX pthreads) em ambiente Linux.
 
     O experimento consiste em incrementar um contador global até 1.000.000.000 (um bilhão), distribuindo o trabalho entre N unidades de execução (N = 2, 4 e 8), em quatro cenários:
 
@@ -65,12 +65,43 @@ Desenvolvimento:
     O processador utilizado é um Intel Core i3-N305 com 8 núcleos físicos e 1 thread por núcleo (sem Hyper-Threading). Isso significa que os experimentos com N = 8 podem saturar todos os núcleos disponíveis, o que impacta diretamente no comportamento de concorrência e na frequência de colisões observadas nos experimentos sem sincronização.
 
     Resultados
+        Tabela Completa (Tempo + Valor Final)
+            | Experimento                 | N  | Tempo (s)   | Valor Final   |
+            |-----------------------------|----|-------------|---------------|
+            | T1 — threads sem mutex      | 2  | 3.3047 s    | 654.290.134   |
+            | T1 — threads sem mutex      | 4  | 7.5468 s    | 684.678.724   |
+            | T1 — threads sem mutex      | 8  | 17.6189 s   | 447.515.488   |
+            | T2 — threads com mutex      | 2  | 99.6028 s   | 1.000.000.000 |
+            | T2 — threads com mutex      | 4  | 93.5196 s   | 1.000.000.000 |
+            | T2 — threads com mutex      | 8  | 90.7124 s   | 1.000.000.000 |
+            | P1 — processos sem semáforo | 2  | 2.5497 s    | 533.402.362   |
+            | P1 — processos sem semáforo | 4  | 2.8438 s    | 319.062.540   |
+            | P1 — processos sem semáforo | 8  | 3.1545 s    | 203.808.717   |
+            | P2 — processos com semáforo | 2  | 182.4934 s  | 1.000.000.000 |
+            | P2 — processos com semáforo | 4  | 200.6238 s  | 1.000.000.000 |
+            | P2 — processos com semáforo | 8  | 303.9470 s  | 1.000.000.000 |
+
+        Tabela de Valores Finais
+            | Experimento                 | N = 2         | N = 4         | N = 8         |
+            |-----------------------------|---------------|---------------|---------------|
+            | T1 — threads sem mutex      | 654.290.134   | 684.678.724   | 447.515.488   |
+            | T2 — threads com mutex      | 1.000.000.000 | 1.000.000.000 | 1.000.000.000 |
+            | P1 — processos sem semáforo | 533.402.362   | 319.062.540   | 203.808.717   |
+            | P2 — processos com semáforo | 1.000.000.000 | 1.000.000.000 | 1.000.000.000 |
+
+        Valores com Corrupção (abaixo de 1 bilhão)
+            | Experimento                 | N = 2       | N = 4       | N = 8       |
+            |-----------------------------|-------------|-------------|-------------|
+            | T1 — threads sem mutex      | 654.290.134 | 684.678.724 | 447.515.488 |
+            | P1 — processos sem semáforo | 533.402.362 | 319.062.540 | 203.808.717 |
+
         Tabela de Tempos
-            |Experimento                 | N = 2      | N = 4      | N = 8      |
-            |T1 — threads sem mutex      | 3.3047 s   | 7.5468 s   | 17.6189 s  |
-            |T2 — threads com mutex      | 99.6028 s  | 93.5196 s  | 90.7124 s  |
-            |P1 — processos sem semáforo | 2.5497 s   | 2.8438 s   | 3.1545 s   |
-            |P2 — processos com semáforo | 182.4934 s | 200.6238 s | 303.9470 s |
+            | Experimento                 | N = 2      | N = 4      | N = 8      |
+            |-----------------------------|------------|------------|------------|
+            | T1 — threads sem mutex      | 3.3047 s   | 7.5468 s   | 17.6189 s  |
+            | T2 — threads com mutex      | 99.6028 s  | 93.5196 s  | 90.7124 s  |
+            | P1 — processos sem semáforo | 2.5497 s   | 2.8438 s   | 3.1545 s   |
+            | P2 — processos com semáforo | 182.4934 s | 200.6238 s | 303.9470 s |
 
     Análise de Corrupção
         Nos experimentos T1 (threads sem mutex) e P1 (processos sem semáforo), o contador não atingiu 1.000.000.000:
@@ -89,7 +120,20 @@ Desenvolvimento:
         O i3-N305 possui 8 núcleos independentes sem Hyper-Threading, o que significa que com N = 8 todos os núcleos executam genuinamente em paralelo, sem compartilhamento de pipeline. Isso maximiza as janelas de colisão entre as leituras e escritas concorrentes, explicando por que P1 com N = 8 (203.808.717) teve o pior índice de corrupção, quase 80% das incrementações foram perdidas. Cada núcleo possui seu próprio cache L1/L2 privado (256 KiB e 16 MiB por instância), o que agrava a inconsistência: cada núcleo pode ter uma cópia diferente do contador em seu cache antes de propagá-la para o L3 compartilhado.
 
     Gráfico de Escalabilidade:
-        ![alt text](Imagem1.png)
+
+        Gráfico 1 — Tempo de Execução vs. Número de Trabalhadores (N)
+        ![Gráfico de Tempo](grafico_tempo.png)
+
+        O gráfico de linhas mostra o tempo de execução (em segundos) para cada cenário conforme N varia entre 2, 4 e 8 trabalhadores.
+        Os cenários com sincronização (T2 e P2) dominam o eixo Y: P2 sobe de ~182 s (N=2) até ~304 s (N=8), pois cada incremento exige uma chamada de sistema de semáforo, que escala pessimamente com mais processos concorrendo pelo mesmo recurso. T2 apresenta comportamento levemente decrescente (~99 s → ~91 s), pois o mutex de thread tem overhead fixo mais baixo e a contenção se distribui melhor entre os núcleos.
+        Os cenários sem sincronização (T1 e P1) ficam próximos de zero na escala do gráfico: P1 mal ultrapassa 3 s mesmo em N=8, e T1 chega a ~18 s em N=8 — tempos baixos que resultam diretamente da corrupção de dados (menos incrementos efetivos sendo contabilizados).
+
+        Gráfico 2 — Valor Final do Contador vs. Número de Trabalhadores (N)
+        ![Gráfico de Valor Final](grafico_valores.png)
+
+        O gráfico de barras compara o valor final alcançado pelo contador em cada cenário e valor de N.
+        T2 e P2 (com sincronização) atingem consistentemente 1.000.000.000 em todos os valores de N, confirmando que os mecanismos de exclusão mútua garantem a integridade dos dados.
+        T1 e P1 (sem sincronização) apresentam valores muito abaixo de 1 bilhão, com degradação crescente conforme N aumenta: P1 cai de ~533 milhões (N=2) para apenas ~204 milhões (N=8), evidenciando que mais núcleos paralelos amplificam as colisões de leitura/escrita na memória compartilhada. T1 oscila entre ~447 e ~685 milhões, com comportamento menos previsível devido à forma como o escalonador distribui as threads entre os núcleos.
 
 Conclusão
     Overhead de Criação

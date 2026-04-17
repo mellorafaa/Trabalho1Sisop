@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Alocar array de threads dinamicamente
     pthread_t *threads = (pthread_t*) malloc(N * sizeof(pthread_t));
     if (threads == NULL) {
         fprintf(stderr, "Erro: falha ao alocar memória para threads\n");
@@ -55,7 +54,6 @@ int main(int argc, char* argv[]) {
 
     por_thread = TOTAL / N;
 
-    // Inicializar mutex com atributos padrão
     if (pthread_mutex_init(&lock, NULL) != 0) {
         fprintf(stderr, "Erro: falha ao inicializar mutex\n");
         free(threads);
@@ -70,7 +68,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Criar threads
     for (int i = 0; i < N; i++) {
         int ret;
         if (modo == 1)
@@ -86,7 +83,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Aguardar conclusão de todas as threads
     for (int i = 0; i < N; i++) {
         int ret = pthread_join(threads[i], NULL);
         if (ret != 0) {
@@ -94,7 +90,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Registrar tempo final
     if (clock_gettime(CLOCK_MONOTONIC, &fim) != 0) {
         perror("clock_gettime (fim)");
         pthread_mutex_destroy(&lock);
@@ -107,7 +102,6 @@ int main(int argc, char* argv[]) {
     printf("Valor final: %ld\n", contador);
     printf("Tempo de execução: %.4f segundos\n", tempo);
 
-    // Cleanup
     pthread_mutex_destroy(&lock);
     free(threads);
     return 0;

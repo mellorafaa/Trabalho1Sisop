@@ -61,7 +61,6 @@ int main(int argc, char* argv[]) {
     struct timespec inicio, fim;
     clock_gettime(CLOCK_MONOTONIC, &inicio);
 
-    // Armazenar PIDs para aguardar finalizações
     pid_t *pids = (pid_t*) malloc(N * sizeof(pid_t));
     if (pids == NULL) {
         fprintf(stderr, "Erro: falha ao alocar memória para PIDs\n");
@@ -90,7 +89,6 @@ int main(int argc, char* argv[]) {
         }
 
         if (pid == 0) {
-            // Processo filho
             for (long j = 0; j < por_processo; j++) {
                 if (modo == 2) {
                     if (sem_wait(sem) == -1) {
@@ -114,11 +112,9 @@ int main(int argc, char* argv[]) {
             }
             exit(0);
         }
-        // Processo pai armazena PID do filho
         pids[i] = pid;
     }
 
-    // Aguardar conclusão de todos os filhos
     for (int i = 0; i < N; i++) {
         int status;
         pid_t waited_pid = waitpid(pids[i], &status, 0);
@@ -129,7 +125,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Registrar tempo final
     if (clock_gettime(CLOCK_MONOTONIC, &fim) == -1) {
         perror("clock_gettime (fim)");
     }
@@ -138,7 +133,6 @@ int main(int argc, char* argv[]) {
     printf("Valor final: %ld\n", *contador);
     printf("Tempo de execução: %.4f segundos\n", tempo);
 
-    // Cleanup recursos do pai
     if (modo == 2) {
         if (sem_close(sem) == -1) {
             perror("sem_close (pai)");
