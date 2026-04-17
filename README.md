@@ -157,7 +157,7 @@ O i3-N305 possui 8 núcleos independentes sem Hyper-Threading, o que significa q
 
 #### Gráfico 1 — Tempo de Execução vs. Número de Trabalhadores (N)
 
-![Gráfico de Tempo](grafico_tempo.png)
+![Gráfico de Tempo](Gráfico1.png)
 
 O gráfico de linhas mostra o tempo de execução (em segundos) para cada cenário conforme N varia entre 2, 4 e 8 trabalhadores.
 Os cenários com sincronização (T2 e P2) dominam o eixo Y: P2 sobe de ~182 s (N=2) até ~304 s (N=8), pois cada incremento exige uma chamada de sistema de semáforo, que escala pessimamente com mais processos concorrendo pelo mesmo recurso. T2 apresenta comportamento levemente decrescente (~99 s → ~91 s), pois o mutex de thread tem overhead fixo mais baixo e a contenção se distribui melhor entre os núcleos.
@@ -165,7 +165,7 @@ Os cenários sem sincronização (T1 e P1) ficam próximos de zero na escala do 
 
 #### Gráfico 2 — Valor Final do Contador vs. Número de Trabalhadores (N)
 
-![Gráfico de Valor Final](grafico_valores.png)
+![Gráfico de Valor Final](Gráfico2.png)
 
 O gráfico de barras compara o valor final alcançado pelo contador em cada cenário e valor de N.
 T2 e P2 (com sincronização) atingem consistentemente 1.000.000.000 em todos os valores de N, confirmando que os mecanismos de exclusão mútua garantem a integridade dos dados.
