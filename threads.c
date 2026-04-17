@@ -30,7 +30,7 @@ void* tarefa_com_mutex(void* arg) {
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Uso: %s <N> <modo>\n", argv[0]);
-        fprintf(stderr, "modo: 1 = sem mutex (T1), 2 = com mutex (T2)\n");
+        fprintf(stderr, "Modo deve ser 1 = sem mutex (T1), 2 = com mutex (T2)\n");
         return 1;
     }
 
@@ -38,24 +38,24 @@ int main(int argc, char* argv[]) {
     int modo = atoi(argv[2]);
 
     if (N <= 0) {
-        fprintf(stderr, "Erro: N deve ser maior que 0\n");
+        fprintf(stderr, "Erro o N deve ser maior que 0\n");
         return 1;
     }
     if (modo != 1 && modo != 2) {
-        fprintf(stderr, "Erro: modo deve ser 1 ou 2\n");
+        fprintf(stderr, "Erro o modo deve ser 1 ou 2\n");
         return 1;
     }
 
     pthread_t *threads = (pthread_t*) malloc(N * sizeof(pthread_t));
     if (threads == NULL) {
-        fprintf(stderr, "Erro: falha ao alocar memória para threads\n");
+        fprintf(stderr, "Erro ao alocar memória para threads\n");
         return 1;
     }
 
     por_thread = TOTAL / N;
 
     if (pthread_mutex_init(&lock, NULL) != 0) {
-        fprintf(stderr, "Erro: falha ao inicializar mutex\n");
+        fprintf(stderr, "Erro ao inicializar mutex\n");
         free(threads);
         return 1;
     }
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
             ret = pthread_create(&threads[i], NULL, tarefa_com_mutex, NULL);
 
         if (ret != 0) {
-            fprintf(stderr, "Erro: falha ao criar thread %d\n", i);
+            fprintf(stderr, "Erro ao criar thread %d\n", i);
             pthread_mutex_destroy(&lock);
             free(threads);
             return 1;
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < N; i++) {
         int ret = pthread_join(threads[i], NULL);
         if (ret != 0) {
-            fprintf(stderr, "Erro: falha ao aguardar thread %d\n", i);
+            fprintf(stderr, "Erro ao aguardar thread %d\n", i);
         }
     }
 

@@ -14,7 +14,7 @@
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Uso: %s <N> <modo>\n", argv[0]);
-        fprintf(stderr, "modo: 1 = sem semáforo (P1), 2 = com semáforo (P2)\n");
+        fprintf(stderr, "Modo deve ser 1 = sem semáforo (P1), 2 = com semáforo (P2)\n");
         return 1;
     }
 
@@ -22,23 +22,23 @@ int main(int argc, char* argv[]) {
     int modo = atoi(argv[2]);
 
     if (N <= 0) {
-        fprintf(stderr, "Erro: N deve ser maior que 0\n");
+        fprintf(stderr, "Erro o N deve ser maior que 0\n");
         return 1;
     }
     if (modo != 1 && modo != 2) {
-        fprintf(stderr, "Erro: modo deve ser 1 ou 2\n");
+        fprintf(stderr, "Erro o modo deve ser 1 ou 2\n");
         return 1;
     }
 
     int shmid = shmget(IPC_PRIVATE, sizeof(long), IPC_CREAT | 0666);
     if (shmid == -1) {
-        perror("Erro: shmget falhou");
+        perror("Erro o shmget falhou");
         return 1;
     }
 
     long *contador = (long*) shmat(shmid, NULL, 0);
     if (contador == (long*) -1) {
-        perror("Erro: shmat falhou");
+        perror("Erro o shmat falhou");
         shmctl(shmid, IPC_RMID, NULL);
         return 1;
     }
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
         sem_unlink(SEM_NAME);
         sem = sem_open(SEM_NAME, O_CREAT | O_EXCL, 0644, 1);
         if (sem == SEM_FAILED) {
-            perror("Erro: sem_open falhou");
+            perror("Erro o sem_open falhou");
             shmdt(contador);
             shmctl(shmid, IPC_RMID, NULL);
             return 1;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 
     pid_t *pids = (pid_t*) malloc(N * sizeof(pid_t));
     if (pids == NULL) {
-        fprintf(stderr, "Erro: falha ao alocar memória para PIDs\n");
+        fprintf(stderr, "Erro o malloc falhou ao alocar memória para PIDs\n");
         if (modo == 2) {
             sem_close(sem);
             sem_unlink(SEM_NAME);
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
         pid_t pid = fork();
 
         if (pid == -1) {
-            fprintf(stderr, "Erro: fork falhou no processo %d\n", i);
+            fprintf(stderr, "Erro o fork falhou no processo %d\n", i);
             if (modo == 2) {
                 sem_close(sem);
                 sem_unlink(SEM_NAME);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
         if (waited_pid == -1) {
             perror("waitpid");
         } else if (!WIFEXITED(status)) {
-            fprintf(stderr, "Aviso: processo %d não terminou normalmente\n", i);
+            fprintf(stderr, "O processo %d não terminou normalmente\n", i);
         }
     }
 
